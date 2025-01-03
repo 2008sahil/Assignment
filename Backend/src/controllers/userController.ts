@@ -32,3 +32,29 @@ export const createUser = async (req: Request, res: Response) => {
   }
 };
 
+export const saveMutualFriends = async (req: Request, res: Response) => {
+  const { username } = req.body;
+  try {
+    const user = await User.findOne({ username });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const followers = await fetchGitHubFollowers(username);
+
+    const mutualFriends: string[] = [];
+    for (const follower of followers) {
+      const isMutual = await checkUserFollows(username, follower.login);
+      if (isMutual) {
+        mutualFriends.push(follower.login);
+      }
+    }
+
+    user.mutualFriends = mutualFriends;
+    await user.save();
+
+    res.status(200).json({ mutualFriends });
+  } catch (error) {
+    res.status(500).json({ error: error });
+  }
+};
